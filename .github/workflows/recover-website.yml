@@ -1,4 +1,4 @@
-name: Recover verified academic website
+name: Finalize and validate academic website
 on:
   push:
     branches: [codex/recover-academic-site]
@@ -6,55 +6,105 @@ on:
 permissions:
   contents: write
 jobs:
-  recover:
+  finalize:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
-      - name: Verify and recover the uploaded website
+      - name: Restore photo and validate website assets
         shell: bash
         run: |
           python3 - <<'PY'
-          import hashlib, json, zipfile
+          import json, urllib.request
           from pathlib import Path
-          expected = json.loads("{\".nojekyll\":\"8b137891791fe96927ad78e64b0aad7bded08bdc\",\"README.md\":\"da9c54a052b749d161e1761a33333ce93c00f0eb\",\"SOURCES.md\":\"06e981263c54289c5c0970c299da8649cdc41d9a\",\"app.js\":\"59fe082f32a648a457bc5ce56c346ba19854554c\",\"assets/cambridge.svg\":\"3877783d4633dd39d0d9b5a65ec68ee4be982697\",\"assets/favicon.svg\":\"889d7ae55201ac7f6a59d737ae79979e7d1f1084\",\"assets/fonts/OFL.txt\":\"21f6aff961064c2e429f570995e446bcdd555422\",\"assets/fonts/inter-latin.ttf\":\"5b8b67110adf942c14c1aaa0b10bfcc9c9e2c33e\",\"assets/life/life-01.jpg\":\"2529ed505c874c9ccaa363f1a8b41653a7a4b657\",\"assets/life/life-03.jpg\":\"cb4ae8b99030f8e2d1cabee5acce7cabade764d2\",\"assets/life/life-04.jpg\":\"d0b4496ed82a88f1f070f33388aaf7f2a589af08\",\"assets/life/life-05.jpg\":\"8fb98a6e4e4ead3702a3ca990d580e7efed7dd30\",\"assets/life/life-06.jpg\":\"d79f88d8ac1d390d5cb9c946fb2b49a2fe418a0f\",\"assets/life/life-07.jpg\":\"eb752881832b357726ae86c546966fd181fcda06\",\"assets/life/life-08.jpg\":\"fae554f3a2234db939768960ff0211aee2357a6b\",\"assets/life/life-09.jpg\":\"449497aea99800055e0bacb4e5059ce2d15c6f80\",\"assets/news-0.jpg\":\"299d752a5464d0d776cd033189045a9414d324ae\",\"assets/news-2.jpg\":\"8369024f160ed1738d8d5905efedf7e0a67ceb1d\",\"assets/news-4.jpg\":\"1fbac3de3b0d4acc1c6c6f0552c94778b02721c1\",\"assets/papers/breast.jpg\":\"762bab9139375da7107838164cfe8d5c3a0f79ea\",\"assets/papers/hif1a.jpg\":\"844deffbba4e062821db43d5614b78f6eeab19dd\",\"assets/papers/metis.jpg\":\"2ff6659fa38248bbc8ed8cafe65c8dd231126b76\",\"assets/papers/microglia.jpg\":\"d4a41989273b850cbcd6c49d8ab97c0b15af812b\",\"assets/papers/realtime.jpg\":\"0636938f06fab5627516caa9ad74ce68fdf49641\",\"assets/papers/tert.jpg\":\"956bd1716fc2060fb732c9810fa28a82653090d6\",\"assets/portrait.jpg\":\"9c1b69f5432a1aecb2e26df5b59be6b6c1cdf21a\",\"assets/umb.svg\":\"717667976cc6f7d4c30f680bc9f25ae80afae897\",\"assets/umd.svg\":\"c909b00678fe54574d15fdcd2863691f4c6f5c07\",\"data.js\":\"3130f4be2fb79238c1a7c7212828c1560beac80f\",\"index.html\":\"e1f3365077b89dc14fb5987896807888760dd269\",\"styles.css\":\"dbbe8890f7c80cb167ca7949b63cd755ee4aa9d9\"}")
-          archive_path = Path("Kevin-Tu-GitHub-Pages-repaired.zip")
-          prefix = "kevinjtu.github.io/"
-          recovered = {}
-          with zipfile.ZipFile(archive_path) as archive:
-              entries = archive.infolist()
-              assert len(entries) == len(expected), "Unexpected archive file count"
-              assert len({i.filename for i in entries}) == len(entries), "Duplicate paths"
-              assert all(i.filename.startswith(prefix) for i in entries), "Unexpected prefix"
-              assert {i.filename[len(prefix):] for i in entries} == set(expected), "Unexpected files"
-              for info in entries:
-                  name = info.filename[len(prefix):]
-                  assert info.file_size < 2_000_000, "Unexpected file size"
-                  contents = archive.read(info)
-                  if name == "assets/life/life-01.jpg" and len(contents) == 0:
-                      print("Omitting the known empty photo:", name)
-                      continue
-                  sha = hashlib.sha1(b"blob " + str(len(contents)).encode() + b"\0" + contents).hexdigest()
-                  assert sha == expected[name], "Recovered file differs from verified original: " + name
-                  recovered[name] = contents
-                  print("Verified", name, len(contents), sha)
-          assert len(recovered) == 30
-          for name, contents in recovered.items():
-              dest = Path(name)
-              dest.parent.mkdir(parents=True, exist_ok=True)
-              dest.write_bytes(contents)
-          Path("CNAME").unlink(missing_ok=True)
-          archive_path.unlink()
-          print("Recovered 30 files; every recovered file matches its original Git blob hash.")
+          from html.parser import HTMLParser
+          from urllib.parse import urlparse, unquote
+          
+          data_path = Path("data.js")
+          text = data_path.read_text()
+          data = json.loads(text.split("window.SITE_DATA = ", 1)[1].strip().removesuffix(";"))
+          assert len(data["publications"]) == 23
+          assert len(data["awards"]) == 14
+          assert len(data["talks"]) == 25
+          assert len(data["abstracts"]) == 10
+          photo = next(p for p in data["photos"] if p["src"] == "assets/life/life-01.jpg")
+          url = photo["original_url"]
+          assert urlparse(url).scheme == "https"
+          assert urlparse(url).hostname == "lh7-us.googleusercontent.com"
+          restored = False
+          try:
+              request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+              with urllib.request.urlopen(request, timeout=25) as response:
+                  raw = response.read(12_000_001)
+              assert 1000 < len(raw) <= 12_000_000, "Unexpected image size"
+              if raw.startswith(b"\x89PNG\r\n\x1a\n"):
+                  extension = "png"
+              elif raw.startswith(b"\xff\xd8\xff"):
+                  extension = "jpg"
+              elif raw.startswith(b"RIFF") and raw[8:12] == b"WEBP":
+                  extension = "webp"
+              else:
+                  raise ValueError("Source did not return a recognized image")
+              photo["src"] = "assets/life/life-01." + extension
+              Path(photo["src"]).write_bytes(raw)
+              restored = True
+              print("Restored original photo:", photo["src"], len(raw), "bytes")
+          except Exception as exc:
+              print("Original photo could not be restored:", type(exc).__name__, str(exc))
+              data["photos"] = [p for p in data["photos"] if p is not photo]
+              data["photos"][0]["size"] = "large"
+          data_path.write_text("/* CV and verified public sources. */\nwindow.SITE_DATA = " + json.dumps(data, ensure_ascii=False, indent=2) + ";\n")
+          assert len(data["photos"]) == (8 if restored else 7)
+          
+          asset_paths = set()
+          def inspect(value):
+              if isinstance(value, dict):
+                  for item in value.values():
+                      inspect(item)
+              elif isinstance(value, list):
+                  for item in value:
+                      inspect(item)
+              elif isinstance(value, str) and value.startswith("assets/"):
+                  asset_paths.add(value)
+          inspect(data)
+          
+          class Links(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.ids = set()
+                  self.references = []
+              def handle_starttag(self, tag, attrs):
+                  attrs = dict(attrs)
+                  if attrs.get("id"):
+                      self.ids.add(attrs["id"])
+                  for key in ("src", "href"):
+                      if attrs.get(key):
+                          self.references.append(attrs[key])
+          parser = Links()
+          parser.feed(Path("index.html").read_text())
+          for ref in parser.references:
+              if ref.startswith("#"):
+                  assert ref[1:] in parser.ids, "Missing anchor: " + ref
+              elif not urlparse(ref).scheme and not ref.startswith("//"):
+                  path = unquote(urlparse(ref).path)
+                  if path:
+                      asset_paths.add(path)
+          for name in sorted(asset_paths):
+              path = Path(name)
+              assert path.is_file() and path.stat().st_size > 0, "Missing or empty asset: " + name
+          assert not Path("CNAME").exists()
+          assert not Path("Kevin-Tu-GitHub-Pages-repaired.zip").exists()
+          print("Validated", len(asset_paths), "local asset references and all HTML anchors.")
+          print("Content counts: 23 publications, 14 awards, 25 talks, 10 abstracts,", len(data["photos"]), "photos.")
           PY
       - name: Check JavaScript syntax
         run: |
           node --check app.js
           node --check data.js
-      - name: Save recovered files to the review branch
+      - name: Save finalized website on the review branch
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -m "Recover verified academic website files from uploaded archive"
+          git commit -m "Finalize photo recovery and validate academic website"
           git push origin HEAD:codex/recover-academic-site
