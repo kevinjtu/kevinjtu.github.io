@@ -1069,16 +1069,10 @@ window.SITE_DATA = {
   ],
   "photos": [
     {
-      "src": "assets/life/life-01.jpg",
-      "original_url": "https://lh7-us.googleusercontent.com/sitesv-images-rt/AMxu72vpmoyN2MZcUhxPBXR5cIkhM7bk9-J5zDg4RTgjwjCQ3QTmFVtG7lcW71IGNbNmWMD_OcV3RimE4-nFeT0_vivJdGNRxjKpmaXHj0OJrBPprbb3XshE5pGNTjhcDQnQpDO17mOGVXHmciiMsGMLV0YwLTirZZQehkYco2T5qs4SXN7GF9dJMa2_Lzg1SAS5mUEt0kOhrukUguX5bb1lzkONlRlGGhzIC44phs1n=w1280",
-      "alt": "An afternoon with friends",
-      "size": "large"
-    },
-    {
       "src": "assets/life/life-03.jpg",
       "original_url": "https://lh7-us.googleusercontent.com/sitesv-images-rt/AMxu72tkJ1liKBJR1MVclwsr7L0l66fe79U7zm7NRxanyQpCsCrT5pXqTq12ZraSqD3E4-MkHg6ukhiS9eFC9DxGy_zPJTENB9M3q0EQrhYKxjw21M0-U9B9u5cF8u9kqlOmV2vLUfV9xKVTkjjL2g4BL_5nydcQ-os2HAtTjqDOvHkc1UZ4Xmk3kx22v8Az6f85G3PX2tt25ii8NLQZiP71gBwqnmMrj_2eFYgyfmeSeLM=w1280",
       "alt": "Cancer Genomics, Multiomics, and Computational Biology conference in Bergamo",
-      "size": ""
+      "size": "large"
     },
     {
       "src": "assets/life/life-04.jpg",
